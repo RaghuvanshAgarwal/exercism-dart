@@ -1,0 +1,43 @@
+# .github/workflows/auto-approve-pr.yml
+#
+# Auto-approves and auto-merges pull requests opened by Exercism's
+# GitHub Solution Syncer bot (exercism-solutions-syncer[bot]).
+#
+# Since this bot opens PRs from a branch within the same repo (not a fork),
+# the standard `pull_request` trigger has enough permissions — no need for
+# the riskier `pull_request_target`.
+
+name: Auto-merge Exercism Solutions
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  contents: write
+
+jobs:
+  auto-approve-and-merge:
+    runs-on: ubuntu-latest
+    if: |
+      github.event.pull_request.user.login == 'exercism-solutions-syncer[bot]' &&
+      github.event.pull_request.user.type == 'Bot'
+    steps:
+      - name: Approve pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr review "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" \
+            --approve \
+            --body "Auto-approved: synced from Exercism."
+
+      - name: Enable auto-merge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr merge "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" \
+            --auto \
+            --squash
